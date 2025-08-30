@@ -130,3 +130,12 @@ export const login = [
     } catch (err) { next(err); }
   }
 ];
+// inside src/controllers/auth.controller.js (after login/register exports)
+export const me = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user?.id).select('-password').lean();
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) { next(err); }
+};
+
