@@ -1,80 +1,65 @@
 import React, { useEffect, useState } from 'react';
 import API from '../api';
 import MovieCard from '../components/MovieCard';
-import { useSearchParams } from 'react-router-dom';
+import Filters from '../components/Filters';
+import Pagination from '../components/Pagination';
+import { useMovies } from '../contexts/MoviesContext';
 
 export default function Movies() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { state, dispatch } = useMovies();
   const [movies, setMovies] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const page = parseInt(searchParams.get('page') || '1', 10);
-  const q = searchParams.get('q') || '';
-  const genre = searchParams.get('genre') || '';
-  const minRating = searchParams.get('minRating') || '';
+  const load = async () => {
+    setLoading(true);
+    try {
+      const qs = new URLSearchParams();
+      qs.set('page', state.page);
+      qs.set('limit', 12);
+      if (state.q) qs.set('q', state.q);
+      if (state.genre) qs.set('genre', state.genre);
+      if (state.year) qs.set('year', state.year);
+      if (state.minRating) qs.set('minRating', state.minRating);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        params.set('page', page);
-        params.set('limit', '12');
-        if (q) params.set('q', q);
-        if (genre) params.set('genre', genre);
-        if (minRating) params.set('minRating', minRating);
-        const { data } = await API.get(`/movies?${params.toString()}`);
-        setMovies(data.data || []);
-        setMeta(data.meta || null);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [page, q, genre, minRating]);
-
-  const doSearch = (e) => {
-    e.preventDefault();
-    const form = new FormData(e.target);
-    const qv = form.get('q')?.toString() || '';
-    setSearchParams({ ...Object.fromEntries(searchParams), q: qv, page: '1' });
+      const { data } = await API.get(`/movies?${qs.toString()}`);
+      const payload = data.data || data;
+      setMovies(payload.data || payload); // support both {data,meta} or array
+      setMeta(data.meta || payload.meta || { page: state.page, totalPages: 1 });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (loading) return <div>Loading movies...</div>;
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [state]);
 
   return (
     <div>
-      <form onSubmit={doSearch} className="mb-4 flex gap-2">
-        <input name="q" defaultValue={q} placeholder="Search movies..." className="flex-1 p-2 border rounded" />
-        <button className="px-3 py-1 bg-blue-600 text-white rounded">Search</button>
-      </form>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {movies.map((m) => <MovieCard key={m._id} movie={m} />)}
-      </div>
-
-      <div className="mt-4 flex justify-between items-center">
-        <div>{meta ? `${meta.total} results` : null}</div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setSearchParams({ ...Object.fromEntries(searchParams), page: String(Math.max(1, page - 1)) })}
-            disabled={page <= 1}
-            className="px-3 py-1 border rounded"
-          >
-            Prev
-          </button>
-          <div className="px-3 py-1 border rounded">{page}</div>
-          <button
-            onClick={() => setSearchParams({ ...Object.fromEntries(searchParams), page: String(page + 1) })}
-            className="px-3 py-1 border rounded"
-          >
-            Next
-          </button>
+      <Filters
+        filters={state}
+        onChange={(patch) => dispatch({ type: 'SET_FILTERS', payload: patch })}
+      />
+      {loading ? (
+        <div className="text-center py-20">
+          <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-indigo-600" />
+          <p className="mt-3 text-gray-600">Loading movies…</p>
         </div>
-      </div>
+      ) : (
+        <>
+          {movies.length === 0 ? (
+            <div className="text-center text-gray-600 py-16">
+              No movies found. Try adjusting filters.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {movies.map((m) => <MovieCard key={m._id} movie={m} />)}
+            </div>
+          )}
+          <Pagination meta={meta} onPage={(p) => dispatch({ type: 'SET_PAGE', payload: p })} />
+        </>
+      )}
     </div>
   );
 }

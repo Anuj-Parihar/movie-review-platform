@@ -35,8 +35,13 @@ export const listReviewsForMovie = [
         Review.countDocuments({ movieId: req.params.id })
       ]);
 
-      res.json({ meta: { page, limit, total, totalPages: Math.ceil(total / limit) }, data: items });
-    } catch (err) { next(err); }
+      res.json({
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+        data: items
+      });
+    } catch (err) {
+      next(err);
+    }
   }
 ];
 
@@ -50,10 +55,18 @@ export const createReview = [
       const exists = await Review.findOne({ userId: req.user.id, movieId: req.params.id });
       if (exists) return res.status(409).json({ message: 'You have already reviewed this movie' });
 
-      await Review.create({ userId: req.user.id, movieId: req.params.id, rating: req.body.rating, reviewText: req.body.reviewText || '' });
+      await Review.create({
+        userId: req.user.id,
+        movieId: req.params.id,
+        rating: req.body.rating,
+        reviewText: req.body.reviewText || ''
+      });
+
       await recalcMovieRating(req.params.id);
 
       res.status(201).json({ message: 'Review added' });
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   }
 ];

@@ -25,7 +25,7 @@ import { Review } from '../models/review.model.js';
 import { Movie } from '../models/movie.model.js';
 
 export async function recalcMovieRating(movieId) {
-  const mId = typeof movieId === 'string' ? mongoose.Types.ObjectId(movieId) : movieId;
+  const mId = typeof movieId === 'string' ? new mongoose.Types.ObjectId(movieId) : movieId;
 
   const stats = await Review.aggregate([
     { $match: { movieId: mId } },

@@ -2,13 +2,13 @@ import axios from 'axios';
 
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
-  timeout: 10000
+  timeout: 15000
 });
 
-API.interceptors.request.use((config) => {
+API.interceptors.request.use(cfg => {
   const token = localStorage.getItem('token');
-  if (token) config.headers = { ...config.headers, Authorization: `Bearer ${token}` };
-  return config;
-}, (err) => Promise.reject(err));
+  if (token) cfg.headers = { ...cfg.headers, Authorization: `Bearer ${token}` };
+  return cfg;
+});
 
 export default API;

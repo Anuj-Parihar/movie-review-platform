@@ -1,57 +1,62 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useReducer } from 'react';
 import API from '../api';
 
 const AuthContext = createContext();
-
 export const useAuth = () => useContext(AuthContext);
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
+const initial = { user: null, loading: true, error: null };
 
-  const fetchMe = async () => {
+function reducer(state, action) {
+  switch(action.type) {
+    case 'SET_USER': return { ...state, user: action.payload, loading: false };
+    case 'CLEAR_USER': return { ...state, user: null, loading: false };
+    case 'LOADING': return { ...state, loading: true };
+    case 'ERROR': return { ...state, error: action.payload, loading: false };
+    default: return state;
+  }
+}
+
+export function AuthProvider({ children }) {
+  const [state, dispatch] = useReducer(reducer, initial);
+
+  async function fetchMe() {
+    dispatch({ type: 'LOADING' });
     try {
       const { data } = await API.get('/auth/me');
-      setUser(data);
+      dispatch({ type: 'SET_USER', payload: data });
     } catch (err) {
-      setUser(null);
-      // token invalid -> remove
       localStorage.removeItem('token');
-    } finally {
-      setLoadingAuth(false);
+      dispatch({ type: 'CLEAR_USER' });
     }
-  };
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      fetchMe();
-    } else {
-      setLoadingAuth(false);
-    }
+    if (token) fetchMe();
+    else dispatch({ type: 'CLEAR_USER' });
   }, []);
 
   const login = async (email, password) => {
     const { data } = await API.post('/auth/login', { email, password });
     localStorage.setItem('token', data.token);
-    setUser(data.user);
+    dispatch({ type: 'SET_USER', payload: data.user });
     return data;
   };
 
   const register = async (username, email, password) => {
     const { data } = await API.post('/auth/register', { username, email, password });
     localStorage.setItem('token', data.token);
-    setUser(data.user);
+    dispatch({ type: 'SET_USER', payload: data.user });
     return data;
   };
 
   const logout = () => {
     localStorage.removeItem('token');
-    setUser(null);
+    dispatch({ type: 'CLEAR_USER' });
   };
 
   return (
-    <AuthContext.Provider value={{ user, loadingAuth, login, register, logout, fetchMe }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, fetchMe }}>
       {children}
     </AuthContext.Provider>
   );

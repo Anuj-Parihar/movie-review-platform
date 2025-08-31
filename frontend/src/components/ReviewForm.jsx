@@ -8,44 +8,47 @@ export default function ReviewForm({ movieId, onSubmitted }) {
   const [rating, setRating] = useState(5);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState(null);
+  const [error, setError] = useState(null);
 
   const submit = async (e) => {
     e?.preventDefault();
-    if (!user) return setErr('You must be logged in to review.');
-    if (rating < 1 || rating > 5) return setErr('Rating must be 1–5');
-    if (text.length > 5000) return setErr('Review too long');
+    if (!user) return setError('Please login to write a review.');
+    if (!rating || rating < 1) return setError('Select a rating.');
 
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      await API.post(`/movies/${movieId}/reviews`, { rating, reviewText: text });
-      setText('');
-      setRating(5);
-      setErr(null);
-      if (onSubmitted) onSubmitted();
-    } catch (error) {
-      setErr(error.response?.data?.message || 'Failed to submit review');
-    } finally {
-      setLoading(false);
-    }
+      await API.post(`/movies/${movieId}/reviews`, { rating, reviewText: text.trim() });
+      setText(''); setRating(5);
+      onSubmitted?.();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not submit review.');
+    } finally { setLoading(false); }
   };
 
   return (
-    <form onSubmit={submit} className="bg-white p-4 rounded shadow">
-      <h4 className="font-semibold mb-2">Write a review</h4>
-      {err && <div className="mb-2 text-sm text-red-600">{err}</div>}
-      <div className="mb-2">
+    <form onSubmit={submit} className="space-y-3">
+      {error && <div className="text-red-600 text-sm">{error}</div>}
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-gray-600">Your rating:</span>
         <StarRating value={rating} onChange={setRating} />
       </div>
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Share your thoughts..."
-        className="w-full border p-2 rounded mb-2 min-h-[90px]"
-      />
+      <label className="block">
+        <span className="sr-only">Write your review</span>
+        <textarea
+          value={text}
+          onChange={e => setText(e.target.value)}
+          maxLength={5000}
+          className="w-full border rounded-xl p-3 min-h-[100px] focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="Share your thoughts…"
+        />
+      </label>
       <div className="flex justify-end">
-        <button type="submit" disabled={loading} className="px-3 py-1 rounded bg-blue-600 text-white">
-          {loading ? 'Sending...' : 'Submit review'}
+        <button
+          disabled={loading}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-xl shadow hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+        >
+          {loading ? 'Posting…' : 'Post review'}
         </button>
       </div>
     </form>

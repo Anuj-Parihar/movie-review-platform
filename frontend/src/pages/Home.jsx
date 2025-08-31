@@ -9,13 +9,12 @@ export default function Home() {
 
   useEffect(() => {
     const load = async () => {
+      setLoading(true);
       try {
-        // top rated
-        const f = await API.get('/movies?limit=6&sort=-averageRating');
-        setFeatured(f.data.data || []);
-        // trending = newest
-        const t = await API.get('/movies?limit=6&sort=-createdAt');
-        setTrending(t.data.data || []);
+        const top = await API.get('/movies?limit=8&sort=-averageRating');
+        const newMovies = await API.get('/movies?limit=8&sort=-createdAt');
+        setFeatured(top.data.data || []);
+        setTrending(newMovies.data.data || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -25,20 +24,27 @@ export default function Home() {
     load();
   }, []);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="text-center py-20">
+        <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-indigo-600" />
+        <p className="mt-3 text-gray-600">Loading…</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <section>
         <h2 className="text-2xl font-bold mb-4">Featured</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {featured.map((m) => <MovieCard key={m._id} movie={m} />)}
         </div>
       </section>
 
       <section>
         <h2 className="text-2xl font-bold mb-4">Trending</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {trending.map((m) => <MovieCard key={m._id} movie={m} />)}
         </div>
       </section>
